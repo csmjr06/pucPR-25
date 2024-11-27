@@ -16,6 +16,8 @@ elif nivel == 4:
     total_de_tentativas = 3
 elif nivel == 5:
     total_de_tentativas = 1
+elif nivel < 1 or nivel > 5:
+    print("numero invalido, tente novamente")
 
 for rodada in range(1, total_de_tentativas + 1):
     print(f"tentativas {rodada} de {total_de_tentativas}")
@@ -33,8 +35,12 @@ for rodada in range(1, total_de_tentativas + 1):
     if acertou:
         print(f"you won in {rodada} rounds")
         print("do you want to play again?")
-        input("Y/N:")
-        break
+        play_again = "null"
+        while play_again != "n" or play_again != "N" or play_again != "y" or play_again != "Y":
+            play_again = int(input("Y/N:"))
+            continue
+        if play_again = "y" or play_again ="Y":
+        
     else:
         if maior :
             print("muito grande")
