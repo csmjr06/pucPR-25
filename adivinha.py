@@ -38,7 +38,7 @@ def jogo():
         elif valor_escolhido > numero_secreto:
             print("Chute errado. Escolha um número MENOR que o número secreto.")
         else:
-            print("Cute errado. Escolha um número MAIOR que o número secreto.")
+            print("Chute errado. Escolha um número MAIOR que o número secreto.")
     
     print(f"Você perdeu! O número secreto era {numero_secreto}.")
     return False
