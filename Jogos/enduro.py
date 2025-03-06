@@ -68,7 +68,7 @@ def create_rival():
     
     if lane_choice == 0:  # South lane (down)
         # Spawn above the screen (coming down)
-        x_pos = road_x + lane_pos * lane_width
+        x_pos = road_x + (2 - lane_pos) * lane_width  # Adjust lane positions for South lane (down)
         y_pos = random.randint(-200, -rival_height)  
         rivals_down.append({'rect': pygame.Rect(x_pos, y_pos, rival_width, rival_height), 'speed': speed})
         
