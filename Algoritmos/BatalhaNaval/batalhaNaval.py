@@ -8,13 +8,14 @@ import random
 import time
 from colorama import init, Fore, Style
 
-# Menu Inicial
+# Inicializa o colorama para suporte a cores no terminal
+init(autoreset=True)
+
 def menu_inicial():
     """
     Exibe o menu inicial do jogo e coleta as configurações do usuário.
     Retorna -> Tamanho do tabuleiro e modo de jogo escolhido.
     """
-    print("Bem-vindo ao Batalha Naval!")
     print("Escolha o tamanho do tabuleiro (mínimo 10x10):")
     
     while True:
@@ -40,7 +41,6 @@ def menu_inicial():
     
     return tamanho, modo
 
-# Configuração do Tabuleiro
 def configurar_tabuleiro(tamanho):
     """
     Cria duas matrizes bidimensionais para o tabuleiro do jogador. 
@@ -51,171 +51,6 @@ def configurar_tabuleiro(tamanho):
     
     return tabuleiro, ataques
 
-"""Exibir Tabuleiro
-def mostrar_tabuleiro(tabuleiro, ataques):
-    
-    Exibe o tabuleiro do jogador e a matriz de ataques realizados.
-    
-    tamanho = len(tabuleiro)
-    
-    # Cabeçalhos das colunas
-    print("  " + " ".join(chr(65 + i) for i in range(tamanho)))
-    
-    # Linhas do tabuleiro
-    for i in range(tamanho):
-        print(f"{i + 1} " + " ".join(tabuleiro[i]))
-    
-    print("\nAtaques Realizados:")
-    print("  " + " ".join(chr(65 + i) for i in range(tamanho)))
-    
-    for i in range(tamanho):
-        print(f"{i + 1} " + " ".join(ataques[i]))
-    
-    print("\n") """
-    
-# Posicionar Navios
-def posicionar_navios(tabuleiro):
-    """
-    Permite ao jogador posicionar seus navios no tabuleiro.
-    """
-    navios = {
-        "Encouraçado": 5,
-        "Porta-aviões": 4,
-        "Contratorpedeiro": 3,
-        "Submarino": 2
-    }
-    
-    for navio, tamanho in navios.items():
-        while True:
-            print(f"\nPosicione seu {navio} ({tamanho} casas):")
-            posicao = input("Digite a coordenada inicial (ex: A1) e a orientação (H para horizontal, V para vertical): ").upper()
-            
-            if len(posicao) < 3 or len(posicao) > 4:
-                print("Entrada inválida. Tente novamente.")
-                continue
-            
-            coluna = ord(posicao[0]) - 65
-            linha = int(posicao[1:]) - 1
-            orientacao = posicao[2] if len(posicao) == 4 else 'H'
-            
-            if orientacao not in ['H', 'V']:
-                print("Orientação inválida. Use 'H' para horizontal ou 'V' para vertical.")
-                continue
-            
-            if orientacao == 'H':
-                if coluna + tamanho > len(tabuleiro) or any(tabuleiro[linha][coluna + i] != '~' for i in range(tamanho)):
-                    print("Posição inválida. Tente novamente.")
-                    continue
-                for i in range(tamanho):
-                    tabuleiro[linha][coluna + i] = 'N'
-            else:
-                if linha + tamanho > len(tabuleiro) or any(tabuleiro[linha + i][coluna] != '~' for i in range(tamanho)):
-                    print("Posição inválida. Tente novamente.")
-                    continue
-                for i in range(tamanho):
-                    tabuleiro[linha + i][coluna] = 'N'
-            
-            print(f"{navio} posicionado com sucesso!")
-            break
-
-# Realizar Ataque
-def realizar_ataque(tabuleiro, ataques):
-    """
-    Processa o ataque do jogador, atualizando as matrizes de ataques e tabuleiro.
-    Retorna -> True se o ataque foi bem-sucedido (acerto), False se foi um erro.
-    """
-    tamanho = len(tabuleiro)
-    
-    while True:
-        ataque = input("Digite as coordenadas do ataque (ex: A1): ").upper()
-        
-        if len(ataque) < 2 or len(ataque) > 3:
-            print("Entrada inválida. Tente novamente.")
-            continue
-        
-        coluna = ord(ataque[0]) - 65
-        linha = int(ataque[1:]) - 1
-        
-        if coluna < 0 or coluna >= tamanho or linha < 0 or linha >= tamanho:
-            print("Coordenadas fora dos limites. Tente novamente.")
-            continue
-        
-        if ataques[linha][coluna] != '~':
-            print("Você já atacou essa posição. Tente outra.")
-            continue
-        
-        ataques[linha][coluna] = 'O'  # Marca o ataque na matriz de ataques
-        
-        if tabuleiro[linha][coluna] == 'N':
-            tabuleiro[linha][coluna] = 'X'  # Acerto
-            print("Acertou!")
-            return True
-        else:
-            print("Errou!")
-            return False
-
-def verificar_vitoria(tabuleiro):
-    """
-    Verifica se todos os navios de um jogador foram afundados.
-    Retorna -> True se o jogador perdeu (todos os navios afundados), False caso contrário.
-    """
-    for linha in tabuleiro:
-        if 'N' in linha:  # Se ainda houver partes de navios não atingidas
-            return False
-    return True
-def delay(segundos):
-    """ 
-    Implementa uma pausa programada para simular o tempo de espera entre turnos.
-    """
-    time.sleep(segundos)
-
-# Jogo Principal
-init(autoreset=True)
-
-def mostrar_tabuleiro(tabuleiro, ataques, mostrar_navios=False):
-    """
-    Exibe o tabuleiro do jogador e a matriz de ataques realizados, com cores.
-    Se mostrar_navios=True, mostra os navios no tabuleiro.
-    """
-    tamanho = len(tabuleiro)
-    print("  " + " ".join(chr(65 + i) for i in range(tamanho)))
-    for i in range(tamanho):
-        linha_str = []
-        for j in range(tamanho):
-            celula = tabuleiro[i][j]
-            if celula == '~':
-                linha_str.append(Fore.BLUE + '~' + Style.RESET_ALL)
-            elif celula == 'N':
-                if mostrar_navios:
-                    linha_str.append(Fore.YELLOW + 'N' + Style.RESET_ALL)
-                else:
-                    linha_str.append(Fore.BLUE + '~' + Style.RESET_ALL)
-            elif celula == 'X':
-                linha_str.append(Fore.RED + 'X' + Style.RESET_ALL)
-            else:
-                linha_str.append(celula)
-        print(f"{i + 1} " + " ".join(linha_str))
-    print("\nAtaques Realizados:")
-    print("  " + " ".join(chr(65 + i) for i in range(tamanho)))
-    for i in range(tamanho):
-        linha_str = []
-        for j in range(tamanho):
-            celula = ataques[i][j]
-            if celula == '~':
-                linha_str.append(Fore.BLUE + '~' + Style.RESET_ALL)
-            elif celula == 'O':
-                linha_str.append(Fore.LIGHTBLACK_EX + 'O' + Style.RESET_ALL)
-            elif celula == 'X':
-                linha_str.append(Fore.RED + 'X' + Style.RESET_ALL)
-            else:
-                linha_str.append(celula)
-        print(f"{i + 1} " + " ".join(linha_str))
-    print("\n")
-
-def registrar_jogada(arquivo, texto):
-    with open(arquivo, "a", encoding="utf-8") as f:
-        f.write(texto + "\n")
-
 def posicionar_navios(tabuleiro, jogador_nome, arquivo_log):
     """
     Permite ao jogador posicionar seus navios no tabuleiro, mostrando o tabuleiro a cada passo.
@@ -223,14 +58,17 @@ def posicionar_navios(tabuleiro, jogador_nome, arquivo_log):
     navios = {
         "Encouraçado": 5,
         "Porta-aviões": 4,
-        "Contratorpedeiro": 3,
-        "Submarino": 2
+        "Contratorpedeiro 1": 3,
+        "Contratorpedeiro 2": 3,
+        "Submarino 1": 2,
+        "Submarino 2": 2
     }
+    
     for navio, tamanho_navio in navios.items():
         while True:
             mostrar_tabuleiro(tabuleiro, [['~']*len(tabuleiro) for _ in range(len(tabuleiro))], mostrar_navios=True)
             print(f"\n{jogador_nome}, posicione seu {navio} ({tamanho_navio} casas):")
-            posicao = input("Digite a coordenada inicial (ex: A1) e a orientação (H para horizontal, V para vertical): ").upper()
+            posicao = input("Digite a coordenada inicial (ex: A1) e a orientação (H para horizontal, V para vertical) (ex.: 'A1 V'): ").upper()
             if len(posicao) < 3 or len(posicao) > 4:
                 print("Entrada inválida. Tente novamente.")
                 continue
@@ -262,6 +100,40 @@ def posicionar_navios(tabuleiro, jogador_nome, arquivo_log):
             print(f"{navio} posicionado com sucesso!")
             registrar_jogada(arquivo_log, f"{jogador_nome} posicionou {navio} em {posicao}")
             break
+
+def mostrar_tabuleiro(tabuleiro, ataques, mostrar_navios=False):
+    """
+    Exibe o tabuleiro do jogador e a matriz de ataques realizados, com cores.
+    Se mostrar_navios=True, mostra os navios no tabuleiro.
+    Os tableiros do jogadore e de ataque são mostrados lado a lado.    """
+
+    print("\nTabuleiro:")
+    tamanho = len(tabuleiro)
+    print("   " + " ".join([chr(65 + i) for i in range(tamanho)]))  # Cabeçalho de colunas
+    for i in range(tamanho):
+        linha = f"{i + 1:2} "  # Formatação da linha
+        for j in range(tamanho):
+            if mostrar_navios and tabuleiro[i][j] == 'N':
+                linha += Fore.BLUE + 'N ' + Style.RESET_ALL  # Navio
+            elif ataques[i][j] == 'X':
+                linha += Fore.RED + 'X ' + Style.RESET_ALL  # Acerto
+            elif ataques[i][j] == 'O':
+                linha += Fore.LIGHTBLACK_EX + 'O ' + Style.RESET_ALL  # Erro
+            else:
+                linha += '~ '  # Água
+        print(linha)
+    print("\nAtaques Realizados:")
+    print("   " + " ".join([chr(65 + i) for i in range(tamanho)]))  # Cabeçalho de colunas
+    for i in range(tamanho):
+        linha = f"{i + 1:2} "
+        for j in range(tamanho):
+            if ataques[i][j] == 'X':
+                linha += Fore.RED + 'X ' + Style.RESET_ALL  # Acerto
+            elif ataques[i][j] == 'O':
+                linha += Fore.LIGHTBLACK_EX + 'O ' + Style.RESET_ALL
+            else:
+                linha += '~ '
+        print(linha)
 
 def realizar_ataque(tabuleiro, ataques, jogador_nome, arquivo_log):
     """
@@ -298,8 +170,29 @@ def realizar_ataque(tabuleiro, ataques, jogador_nome, arquivo_log):
             registrar_jogada(arquivo_log, f"{jogador_nome} atacou {ataque}: ERROU")
             return False
 
+def verificar_vitoria(tabuleiro):
+    """
+    Verifica se todos os navios de um jogador foram afundados.
+    Retorna -> True se o jogador perdeu (todos os navios afundados), False caso contrário.
+    """
+    for linha in tabuleiro:
+        if 'N' in linha:  # Se ainda houver partes de navios não atingidas
+            return False
+    return True
+
+def delay(segundos):
+    """ 
+    Implementa uma pausa programada para simular o tempo de espera entre turnos.
+    """
+    time.sleep(segundos)
+
+def registrar_jogada(arquivo, texto):
+    with open(arquivo, "a", encoding="utf-8") as f:
+        f.write(texto + "\n")
+
 def jogo():
     """Função principal que controla o fluxo do jogo, com interface simples e registro de partidas."""
+    print("Bem-vindo ao Batalha Naval!")
     while True:
         print("="*40)
         print("BATALHA NAVAL".center(40))
