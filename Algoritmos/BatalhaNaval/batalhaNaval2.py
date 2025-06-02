@@ -5,6 +5,7 @@ import random
 import time
 from colorama import init, Fore, Back, Style
 init(autoreset=True)
+log_level = 1  # Nível de log (1 para INFO, 2 para DEBUG, 3 para ERROR)
 arquivo_log = f"partida_batalha_naval_{int(time.time())}.txt"
 
 
@@ -173,7 +174,7 @@ def posicionar_navios(tabuleiro, tamanho, auto=False) -> list:
     print(Fore.GREEN + Style.BRIGHT + "Todos os navios posicionados com sucesso!") 
     return tabuleiro
 
-def Jogador_ataca(tabuleiro, ataques, linha, coluna) -> tuple:
+def Jogador_ataca(tabuleiro, ataques, linha, coluna, ultimo_acerto=None) -> tuple:
     '''
     Simula o ataque do jogador, atualizando as matrizes de ataques e tabuleiro.
     Parâmetros:
@@ -181,6 +182,7 @@ def Jogador_ataca(tabuleiro, ataques, linha, coluna) -> tuple:
     - ataques: Matriz de ataques realizados.
     - linha: Linha do ataque.
     - coluna: Coluna do ataque.
+    - ultimo_acerto: (coluna, linha) da última posição acertada, usada para IA.
     Retorna: (bool, tabuleiro, ataques, ultimo_acerto)
     - True se o ataque foi bem-sucedido (acerto), False se foi um erro (água).
     - tabuleiro: Matriz do tabuleiro atualizada.
@@ -199,35 +201,7 @@ def Jogador_ataca(tabuleiro, ataques, linha, coluna) -> tuple:
 
     exibir_tabuleiro(tabuleiro, ataques)
     return tabuleiro[linha][coluna] == 'X', tabuleiro, ataques, ultimo_acerto
- 
-def IA_ataca(tabuleiro, ataques, linha, coluna, ultimo_acerto=None) -> tuple:
-    """
-    Simula o ataque da IA, atualizando as matrizes de ataques e tabuleiro.
-    Parâmetros:
-    - tabuleiro: Matriz do tabuleiro do jogador atacado.
-    - ataques: Matriz de ataques realizados.
-    - linha: Linha do ataque.
-    - coluna: Coluna do ataque.
-    - ultimo_acerto: (coluna, linha) da última posição acertada, usada para IA.
-    Retorna: (bool, tabuleiro, ataques, ultimo_acerto)
-    - True se o ataque foi bem-sucedido (acerto), False se foi um erro (água).
-    - tabuleiro: Matriz do tabuleiro atualizada.
-    - ataques: Matriz de ataques atualizada.
-    - ultimo_acerto: (coluna, linha) da última posição acertada, usada para IA.
-    """
-    
-    if tabuleiro[linha][coluna] == 'N':
-        ataques[linha][coluna] = 'X'
-        tabuleiro[linha][coluna] = 'X'
-        print(Fore.GREEN + f"IA acertou em {chr(65+coluna)}{linha+1}!")
-        ultimo_acerto = (coluna, linha)
-        return True, tabuleiro, ataques, ultimo_acerto
-    else:
-        ataques[linha][coluna] = 'O'
-        print(Fore.YELLOW + f"IA errou em {chr(65+coluna)}{linha+1}.")
-        ultimo_acerto = None
-        return False, tabuleiro, ataques, ultimo_acerto  
-    
+     
 def realizar_ataque(tabuleiro, ataques, tamanho, modoAI = False, ultimo_acerto=None) -> tuple:
     """
     Processa o ataque do jogador ou da IA, atualizando as matrizes de ataques e tabuleiro.
@@ -270,7 +244,7 @@ def realizar_ataque(tabuleiro, ataques, tamanho, modoAI = False, ultimo_acerto=N
                 coluna = random.randint(0, tamanho - 1)
                 linha = random.randint(0, tamanho - 1)
                 if ataques[linha][coluna] == '~':
-                    return IA_ataca(tabuleiro, ataques, linha, coluna, ultimo_acerto)
+                    return Jogador_ataca(tabuleiro, ataques, linha, coluna, ultimo_acerto)
         else:
             # IA ataca baseado no último acerto
             coluna, linha = ultimo_acerto
@@ -280,7 +254,7 @@ def realizar_ataque(tabuleiro, ataques, tamanho, modoAI = False, ultimo_acerto=N
             linha += dy
             if 0 <= coluna < tamanho and 0 <= linha < tamanho:
                 if ataques[linha][coluna] == '~':
-                    return IA_ataca(tabuleiro, ataques, linha, coluna, ultimo_acerto)
+                    return Jogador_ataca(tabuleiro, ataques, linha, coluna, ultimo_acerto)
 
 def navio_afundado(tabuleiro, ultimo_acerto) -> bool:
     '''
@@ -348,16 +322,23 @@ def delay(segundos) -> None:
     print(Fore.BLUE + Style.BRIGHT + "Aguardando o próximo turno...")
     time.sleep(segundos)
     
-def logger(arquivo, texto) -> None:
+def logger(arquivo, texto, level=1) -> None:
     """
     Logger que registra as jogadas em um arquivo de texto.
     Parâmetros:
     - arquivo: Caminho do arquivo onde as jogadas serão registradas.
     - texto: Texto a ser registrado no arquivo.
+    - level: Nível de log (1 para INFO, 2 para DEBUG, 3 para ERROR).
     Retorna: None
     """
+    if level == 1:
+        log_lvl = "[INFO] "
+    elif level == 2:
+        log_lvl = "[DEBUG] "
+    elif level == 3:
+        log_lvl = "[ERROR] "
     with open(arquivo, 'a') as f:
-        f.write("INFO: " + str(time.localtime()) + ": " + texto + '\n')
+        f.write(Fore.BLUE + Style.BRIGHT + str(time.localtime()) + ": " + texto + '\n')
         
 def jogo():
     """

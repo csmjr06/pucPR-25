@@ -1,309 +1,377 @@
-"""
-Desenvolver um jogo completo e funcional de Batalha Naval em Python, aplicando conceitos fundamentais de programação, como manipulação de matrizes bidimensionais, funções, estruturas de repetição, condicionais, validação de entrada, encapsulamento e exibição formatada no terminal.
-"""
+# configurações
 
-# Batalha Naval - Jogo Completo em Python
+TamanhoBarco = 1  # tamanho do barco
+TamanhoMinimo = 10 # tamanho mínimo do tabuleiro
+TamanhoMaximo = 26 # tamanho máximo do tabuleiro (de preferência no MÁXIMO 26 pra não passar as letras do alfabeto)
+
+# código
 
 import random
-import time
-from colorama import init, Fore, Style
+import os
+import platform
 
-# Inicializa o colorama para suporte a cores no terminal
-init(autoreset=True)
+from colorama import Fore, Style, init
+init(autoreset=True)  # Inicializa o colorama para resetar cores automaticamente
+import datetime
+arquivo_log = f"batalha_naval_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
-def menu_inicial():
-    """
-    Exibe o menu inicial do jogo e coleta as configurações do usuário.
-    Retorna -> Tamanho do tabuleiro e modo de jogo escolhido.
-    """
-    print("Escolha o tamanho do tabuleiro (mínimo 10x10):")
-    
-    while True:
-        try:
-            tamanho = int(input("Digite o tamanho do tabuleiro (ex: 10 para 10x10): "))
-            if tamanho >= 10:
-                break
-            else:
-                print("Tamanho inválido. Deve ser maior ou igual a 10.")
-        except ValueError:
-            print("Entrada inválida. Por favor, digite um número válido.")
-    
-    print("\nEscolha o modo de jogo:")
-    print("1 - Jogador vs Jogador")
-    print("2 - Jogador vs IA")
-    
-    while True:
-        modo = input("Digite 1 ou 2: ")
-        if modo in ['1', '2']:
-            break
-        else:
-            print("Opção inválida. Por favor, digite 1 ou 2.")
-    
-    return tamanho, modo
 
-def configurar_tabuleiro(tamanho):
-    """
-    Cria duas matrizes bidimensionais para o tabuleiro do jogador. 
-    Retorna -> Duas matrizes: uma para o próprio tabuleiro e outra para os ataques realizados.
-    """
-    tabuleiro = [['~' for _ in range(tamanho)] for _ in range(tamanho)]
-    ataques = [['~' for _ in range(tamanho)] for _ in range(tamanho)]
-    
-    return tabuleiro, ataques
+def clear():
+    '''
+    Limpa o console dependendo do sistema operacional.'''
+    if platform.system() == "Windows":
+        os.system('cls')
+    else:
+        os.system('clear')
+clear()
 
-def posicionar_navios(tabuleiro, jogador_nome, arquivo_log):
-    """
-    Permite ao jogador posicionar seus navios no tabuleiro, mostrando o tabuleiro a cada passo.
-    """
-    navios = {
-        "Encouraçado": 5,
-        "Porta-aviões": 4,
-        "Contratorpedeiro 1": 3,
-        "Contratorpedeiro 2": 3,
-        "Submarino 1": 2,
-        "Submarino 2": 2
-    }
-    
-    for navio, tamanho_navio in navios.items():
-        while True:
-            mostrar_tabuleiro(tabuleiro, [['~']*len(tabuleiro) for _ in range(len(tabuleiro))], mostrar_navios=True)
-            print(f"\n{jogador_nome}, posicione seu {navio} ({tamanho_navio} casas):")
-            posicao = input("Digite a coordenada inicial (ex: A1) e a orientação (H para horizontal, V para vertical) (ex.: 'A1 V'): ").upper()
-            if len(posicao) < 3 or len(posicao) > 4:
-                print("Entrada inválida. Tente novamente.")
-                continue
-            coluna = ord(posicao[0]) - 65
-            try:
-                linha = int(posicao[1:-1]) - 1 if len(posicao) == 4 else int(posicao[1:]) - 1
-            except ValueError:
-                print("Entrada inválida. Tente novamente.")
-                continue
-            orientacao = posicao[-1] if posicao[-1] in ['H', 'V'] else 'H'
-            if orientacao not in ['H', 'V']:
-                print("Orientação inválida. Use 'H' para horizontal ou 'V' para vertical.")
-                continue
-            if linha < 0 or linha >= len(tabuleiro) or coluna < 0 or coluna >= len(tabuleiro):
-                print("Coordenadas fora dos limites. Tente novamente.")
-                continue
-            if orientacao == 'H':
-                if coluna + tamanho_navio > len(tabuleiro) or any(tabuleiro[linha][coluna + i] != '~' for i in range(tamanho_navio)):
-                    print("Posição inválida. Tente novamente.")
-                    continue
-                for i in range(tamanho_navio):
-                    tabuleiro[linha][coluna + i] = 'N'
-            else:
-                if linha + tamanho_navio > len(tabuleiro) or any(tabuleiro[linha + i][coluna] != '~' for i in range(tamanho_navio)):
-                    print("Posição inválida. Tente novamente.")
-                    continue
-                for i in range(tamanho_navio):
-                    tabuleiro[linha + i][coluna] = 'N'
-            print(f"{navio} posicionado com sucesso!")
-            registrar_jogada(arquivo_log, f"{jogador_nome} posicionou {navio} em {posicao}")
-            break
+def logger(arquivo, mensagem, level=1):
+    '''
+    Registra mensagens em um arquivo de log.
+    Args:
+        arquivo (str): Caminho do arquivo de log.
+        mensagem (str): Mensagem a ser registrada.
+        level (str): Nível de log (padrão é 'INFO').
+    '''
+    levels = [[1, "[INFO]"], [2, "[WARNING]"], [3, "[ERROR]"], [4, "[DEBUG]"]]
 
-def mostrar_tabuleiro(tabuleiro, ataques, mostrar_navios=False):
-    """
-    Exibe o tabuleiro do jogador e a matriz de ataques realizados, com cores.
-    Se mostrar_navios=True, mostra os navios no tabuleiro.
-    Os tableiros do jogadore e de ataque são mostrados lado a lado.    """
+    with open(arquivo, "a") as f:
+        f.write(f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')} {levels[level-1][1]} {mensagem}\n")
 
-    print("\nTabuleiro:")
-    tamanho = len(tabuleiro)
-    print("   " + " ".join([chr(65 + i) for i in range(tamanho)]))  # Cabeçalho de colunas
-    for i in range(tamanho):
-        linha = f"{i + 1:2} "  # Formatação da linha
-        for j in range(tamanho):
-            if mostrar_navios and tabuleiro[i][j] == 'N':
-                linha += Fore.BLUE + 'N ' + Style.RESET_ALL  # Navio
-            elif ataques[i][j] == 'X':
-                linha += Fore.RED + 'X ' + Style.RESET_ALL  # Acerto
-            elif ataques[i][j] == 'O':
-                linha += Fore.LIGHTBLACK_EX + 'O ' + Style.RESET_ALL  # Erro
-            else:
-                linha += '~ '  # Água
-        print(linha)
-    print("\nAtaques Realizados:")
-    print("   " + " ".join([chr(65 + i) for i in range(tamanho)]))  # Cabeçalho de colunas
-    for i in range(tamanho):
-        linha = f"{i + 1:2} "
-        for j in range(tamanho):
-            if ataques[i][j] == 'X':
-                linha += Fore.RED + 'X ' + Style.RESET_ALL  # Acerto
-            elif ataques[i][j] == 'O':
-                linha += Fore.LIGHTBLACK_EX + 'O ' + Style.RESET_ALL
-            else:
-                linha += '~ '
-        print(linha)
+def menu():
+    '''
+    Exibe o menu inicial do jogo e solicita as configurações do tabuleiro e modo de jogo.
+    Parametros: None
+    Retornos: Tamanho do tabuleiro e modo de jogo (1 para jogador vs jogador, 2 para jogador vs máquina).
+    '''
+    print(Fore.MAGENTA + Style.BRIGHT + "batalha naval\n")
+    tamanho = int(input(Fore.CYAN + Style.BRIGHT + f"tamanho do tabuleiro ({TamanhoMinimo}-{TamanhoMaximo}): "))
+    while tamanho < TamanhoMinimo or tamanho > TamanhoMaximo:
+        clear()
+        print(Fore.RED + "tamanho inválido\n")
+        tamanho = int(input(Fore.CYAN + Style.BRIGHT + f"tamanho do tabuleiro ({TamanhoMinimo}-{TamanhoMaximo}): "))
+    clear()
+    modo = input("modo de jogo (1 = jogador vs jogador | 2 = jogador vs maquina): ")
+    while modo not in ['1', '2']:
+        clear()
+        print(Fore.RED + "modo inválido\n")
+        modo = input(Fore.CYAN + Style.BRIGHT + "modo de jogo (1 = jogador vs jogador | 2 = jogador vs maquina): ")
 
-def realizar_ataque(tabuleiro, ataques, jogador_nome, arquivo_log):
-    """
-    Processa o ataque do jogador, atualizando as matrizes de ataques e tabuleiro.
-    Retorna -> True se o ataque foi bem-sucedido (acerto), False se foi um erro.
-    """
-    tamanho = len(tabuleiro)
-    while True:
-        ataque = input(f"{jogador_nome}, digite as coordenadas do ataque (ex: A1): ").upper()
-        if len(ataque) < 2 or len(ataque) > 3:
-            print("Entrada inválida. Tente novamente.")
-            continue
-        coluna = ord(ataque[0]) - 65
-        try:
-            linha = int(ataque[1:]) - 1
-        except ValueError:
-            print("Entrada inválida. Tente novamente.")
-            continue
-        if coluna < 0 or coluna >= tamanho or linha < 0 or linha >= tamanho:
-            print("Coordenadas fora dos limites. Tente novamente.")
-            continue
-        if ataques[linha][coluna] != '~':
-            print("Você já atacou essa posição. Tente outra.")
-            continue
-        if tabuleiro[linha][coluna] == 'N':
-            tabuleiro[linha][coluna] = 'X'
-            ataques[linha][coluna] = 'X'
-            print(Fore.GREEN + "Acertou!" + Style.RESET_ALL)
-            registrar_jogada(arquivo_log, f"{jogador_nome} atacou {ataque}: ACERTOU")
-            return True
-        else:
-            ataques[linha][coluna] = 'O'
-            print(Fore.LIGHTBLACK_EX + "Errou!" + Style.RESET_ALL)
-            registrar_jogada(arquivo_log, f"{jogador_nome} atacou {ataque}: ERROU")
-            return False
+    return tamanho, int(modo)
 
-def verificar_vitoria(tabuleiro):
-    """
-    Verifica se todos os navios de um jogador foram afundados.
-    Retorna -> True se o jogador perdeu (todos os navios afundados), False caso contrário.
-    """
+def CriarBoard(tamanho):
+    '''
+    Cria um tabuleiro vazio com o tamanho especificado.
+    Parametros: tamanho (int) - Tamanho do tabuleiro.
+    Retornos: (list) - Tabuleiro vazio.
+    '''
+    return [[Fore.BLUE + '~' for _ in range(tamanho)] for _ in range(tamanho)]
+
+def PrintBoard(tabuleiro):
+    '''
+    Exibe o tabuleiro formatado com letras para colunas e números para linhas.
+    Parametros: tabuleiro (list) - Tabuleiro a ser exibido.
+    Retornos: None
+    '''
+    letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    print("  ", end="")
+    for i in range(len(tabuleiro[0])):
+        print(letras[i], end=" ")
+    print()
+    for i in range(len(tabuleiro)):
+        print(str(i+1).rjust(2), end=" ")
+        for j in range(len(tabuleiro[i])):
+            print(tabuleiro[i][j], end=" ")
+        print()
+
+def LetraPNumero(letra):
+    '''
+    Converte uma letra (A-Z) para um número correspondente (0-25).
+    Parametros: letra (str) - Letra a ser convertida.
+    Retornos: (int) - Número correspondente (0-25).
+    '''
+    return ord(letra.upper()) - ord('A')
+
+def NumeroPLetra(numero):
+    '''
+    Converte um número (0-25) para uma letra correspondente (A-Z).
+    Parametros: numero (int) - Número a ser convertido.
+    Retornos: (str) - Letra correspondente (A-Z).
+    '''
+    return chr(ord('A') + numero)
+
+def vitoria(tabuleiro):
+    '''
+    Verifica se todos os barcos foram afundados no tabuleiro.
+    Parametros: tabuleiro (list) - Tabuleiro a ser verificado.
+    Retornos: (bool) - True se todos os barcos foram afundados, False caso contrário.
+    '''
     for linha in tabuleiro:
-        if 'N' in linha:  # Se ainda houver partes de navios não atingidas
+        if 'n' in linha:
             return False
     return True
 
-def delay(segundos):
-    """ 
-    Implementa uma pausa programada para simular o tempo de espera entre turnos.
-    """
-    time.sleep(segundos)
+def barco_valido(tabuleiro, linha, coluna, orientacao, tamanho_barco):
+    '''
+    Verifica se a posição e orientação do barco são válidas.
+    Parametros:
+        tabuleiro (list) - Tabuleiro onde o barco será colocado.
+        linha (int) - Linha inicial do barco.
+        coluna (int) - Coluna inicial do barco.
+        orientacao (str) - Orientação do barco ('h' para horizontal, 'v' para vertical).
+        tamanho_barco (int) - Tamanho do barco.
+    Retornos: (bool) - True se a posição é válida, False caso contrário.
+    '''
+    if orientacao == 'h':
+        if coluna + tamanho_barco > len(tabuleiro[0]) or linha < 0 or linha >= len(tabuleiro):
+            return False
+        for i in range(tamanho_barco):
+            if tabuleiro[linha][coluna + i] != '~':
+                return False
+    elif orientacao == 'v':
+        if linha + tamanho_barco > len(tabuleiro) or coluna < 0 or coluna >= len(tabuleiro[0]):
+            return False
+        for i in range(tamanho_barco):
+            if tabuleiro[linha + i][coluna] != '~':
+                return False
+    else:
+        return False
+    return True
 
-def registrar_jogada(arquivo, texto):
-    with open(arquivo, "a", encoding="utf-8") as f:
-        f.write(texto + "\n")
-
-def jogo():
-    """Função principal que controla o fluxo do jogo, com interface simples e registro de partidas."""
-    print("Bem-vindo ao Batalha Naval!")
+def ColocarBarco(tabuleiro, tipo_barco='generico', tamanho_barco=TamanhoBarco):
+    '''
+    Solicita ao usuário a posição e orientação do barco e o coloca no tabuleiro.
+    verifica se a posição é válida.
+    Parametros: tabuleiro (list) - Tabuleiro onde o barco será colocado.
+    Retorno: tabuleiro atualizado
+    '''
+    print(f"coloque seu navio (tamanho: {TamanhoBarco})\n")
     while True:
-        print("="*40)
-        print("BATALHA NAVAL".center(40))
-        print("="*40)
-        print("1 - Iniciar nova partida")
-        print("2 - Sair")
-        escolha = input("Escolha uma opção: ")
-        if escolha == '2':
-            print("Obrigado por jogar Batalha Naval!")
-            break
-        elif escolha != '1':
-            print("Opção inválida.")
-            continue
-
-        tamanho, modo = menu_inicial()
-        arquivo_log = f"partida_batalha_naval_{int(time.time())}.txt"
-        registrar_jogada(arquivo_log, f"Partida iniciada. Tamanho do tabuleiro: {tamanho}, Modo: {'PvP' if modo=='1' else 'PvE'}")
-
-        tabuleiro_jogador1, ataques_jogador1 = configurar_tabuleiro(tamanho)
-        tabuleiro_jogador2, ataques_jogador2 = configurar_tabuleiro(tamanho)
-
-        print("\nJogador 1, posicione seus navios:")
-        posicionar_navios(tabuleiro_jogador1, "Jogador 1", arquivo_log)
-        mostrar_tabuleiro(tabuleiro_jogador1, ataques_jogador1, mostrar_navios=True)
-
-        if modo == '1':
-            print("\nJogador 2, posicione seus navios:")
-            posicionar_navios(tabuleiro_jogador2, "Jogador 2", arquivo_log)
-            mostrar_tabuleiro(tabuleiro_jogador2, ataques_jogador2, mostrar_navios=True)
+        linha_input = input("linha inicial do navio: ")
+        if linha_input.isdigit():
+            linha = int(linha_input) - 1
+            if 0 <= linha < len(tabuleiro):
+                break
+            else:
+                print("Linha fora do intervalo do tabuleiro.")
         else:
-            # IA posiciona navios aleatoriamente
-            navios = {
-                "Encouraçado": 5,
-                "Porta-aviões": 4,
-                "Contratorpedeiro": 3,
-                "Submarino": 2
-            }
-            for navio, tamanho_navio in navios.items():
-                while True:
-                    orientacao = random.choice(['H', 'V'])
-                    if orientacao == 'H':
-                        linha = random.randint(0, tamanho - 1)
-                        coluna = random.randint(0, tamanho - tamanho_navio)
-                        if all(tabuleiro_jogador2[linha][coluna + i] == '~' for i in range(tamanho_navio)):
-                            for i in range(tamanho_navio):
-                                tabuleiro_jogador2[linha][coluna + i] = 'N'
-                            registrar_jogada(arquivo_log, f"IA posicionou {navio} em {chr(65+coluna)}{linha+1}{orientacao}")
-                            break
-                    else:
-                        linha = random.randint(0, tamanho - tamanho_navio)
-                        coluna = random.randint(0, tamanho - 1)
-                        if all(tabuleiro_jogador2[linha + i][coluna] == '~' for i in range(tamanho_navio)):
-                            for i in range(tamanho_navio):
-                                tabuleiro_jogador2[linha + i][coluna] = 'N'
-                            registrar_jogada(arquivo_log, f"IA posicionou {navio} em {chr(65+coluna)}{linha+1}{orientacao}")
-                            break
-
-        turno = 0
-        while True:
-            if turno % 2 == 0:  # Jogador 1
-                print("\nTurno do Jogador 1:")
-                mostrar_tabuleiro(tabuleiro_jogador2, ataques_jogador1)
-                acerto = realizar_ataque(tabuleiro_jogador2, ataques_jogador1, "Jogador 1", arquivo_log)
-                if verificar_vitoria(tabuleiro_jogador2):
-                    print(Fore.GREEN + "Jogador 1 venceu!" + Style.RESET_ALL)
-                    registrar_jogada(arquivo_log, "Jogador 1 venceu!")
-                    break
-            else:  # Jogador 2 ou IA
-                if modo == '1':
-                    print("\nTurno do Jogador 2:")
-                    mostrar_tabuleiro(tabuleiro_jogador1, ataques_jogador2)
-                    acerto = realizar_ataque(tabuleiro_jogador1, ataques_jogador2, "Jogador 2", arquivo_log)
-                    if verificar_vitoria(tabuleiro_jogador1):
-                        print(Fore.GREEN + "Jogador 2 venceu!" + Style.RESET_ALL)
-                        registrar_jogada(arquivo_log, "Jogador 2 venceu!")
-                        break
-                else:  # Modo IA
-                    print("\nTurno da IA:")
-                    delay(2)
-                    # IA faz ataque aleatório
-                    while True:
-                        linha = random.randint(0, tamanho - 1)
-                        coluna = random.randint(0, tamanho - 1)
-                        if ataques_jogador2[linha][coluna] == '~':
-                            if tabuleiro_jogador1[linha][coluna] == 'N':
-                                tabuleiro_jogador1[linha][coluna] = 'X'
-                                ataques_jogador2[linha][coluna] = 'X'
-                                print(Fore.GREEN + f"IA acertou em {chr(65+coluna)}{linha+1}!" + Style.RESET_ALL)
-                                registrar_jogada(arquivo_log, f"IA atacou {chr(65+coluna)}{linha+1}: ACERTOU")
-                            else:
-                                ataques_jogador2[linha][coluna] = 'O'
-                                print(Fore.LIGHTBLACK_EX + f"IA errou em {chr(65+coluna)}{linha+1}." + Style.RESET_ALL)
-                                registrar_jogada(arquivo_log, f"IA atacou {chr(65+coluna)}{linha+1}: ERROU")
-                            break
-                    mostrar_tabuleiro(tabuleiro_jogador1, ataques_jogador2)
-                    if verificar_vitoria(tabuleiro_jogador1):
-                        print(Fore.GREEN + "A IA venceu!" + Style.RESET_ALL)
-                        registrar_jogada(arquivo_log, "A IA venceu!")
-                        break
-            turno += 1
-
-        print("\nDeseja jogar novamente?")
-        print("1 - Sim")
-        print("2 - Não (Sair)")
-        if input("Escolha: ") != '1':
-            print("Obrigado por jogar Batalha Naval!")
+            print("Por favor, digite um número válido para a linha.")
+    while True:
+        coluna_letra = input("coluna inicial do navio (letra): ").upper()
+        if coluna_letra.isalpha() and 0 <= LetraPNumero(coluna_letra) < len(tabuleiro[0]):
+            coluna = LetraPNumero(coluna_letra)
             break
-# Iniciar o jogo
-if __name__ == "__main__":
-    jogo()
-# Fim do Jogo
+        else:
+            print("Por favor, digite uma letra válida para a coluna.")
+    orientacao = input("horizontal (h) ou vertical (v): ").lower()
+    clear()
 
+    if linha < 0 or linha >= len(tabuleiro) or coluna < 0 or coluna >= len(tabuleiro):
+        print("posição inválida!")
+        return ColocarBarco(tabuleiro, tipo_barco, tamanho_barco)
+    if orientacao not in ['h', 'v']:
+        print("orientação inválida!")
+        return ColocarBarco(tabuleiro, tipo_barco, tamanho_barco)
+    if not barco_valido(tabuleiro, linha, coluna, orientacao, tamanho_barco):
+        print("posição inválida!")
+        return ColocarBarco(tabuleiro, tipo_barco, tamanho_barco)
+
+    for i in range(tamanho_barco):
+        if orientacao == 'h':
+            tabuleiro[linha][coluna + i] = 'n'
+        elif orientacao == 'v':
+            tabuleiro[linha + i][coluna] = 'n'
     
+    return tabuleiro
+
+def realizar_ataque(tabuleiro_alvo, tabuleiro_tiros):
+    '''
+    Solicita ao usuário a posição do ataque e atualiza os tabuleiros de acordo com o resultado.
+    Parametros:
+        tabuleiro_alvo (list) - Tabuleiro do adversário onde o ataque será realizado.
+        tabuleiro_tiros (list) - Tabuleiro do jogador onde os tiros são registrados.
+    Retornos:
+        tabuleiro_alvo (list) - Tabuleiro atualizado com o resultado do ataque.
+        tabuleiro_tiros (list) - Tabuleiro atualizado com o resultado do ataque.
+        True se o ataque acertou, False se errou.
+    '''
+    while True:
+        linha_input = input("\nlinha do ataque: ")
+        if linha_input.isdigit():
+            linha = int(linha_input) - 1
+            if 0 <= linha < len(tabuleiro_alvo):
+                break
+            else:
+                print("Linha fora do intervalo do tabuleiro.")
+        else:
+            print("Por favor, digite um número válido para a linha.")
+    while True:
+        coluna_letra = input("coluna do ataque (letra): ").upper()
+        if coluna_letra.isalpha() and 0 <= LetraPNumero(coluna_letra) < len(tabuleiro_alvo[0]):
+            coluna = LetraPNumero(coluna_letra)
+            break
+        else:
+            print("Por favor, digite uma letra válida para a coluna.")
+    clear()
+    if tabuleiro_alvo[linha][coluna] == 'n':
+        print(Fore.GREEN + "acertou!\n")
+        tabuleiro_alvo[linha][coluna] = Fore.RED + 'X' 
+        tabuleiro_tiros[linha][coluna] = Fore.RED + 'X'
+        return tabuleiro_alvo, tabuleiro_tiros, True
+    elif tabuleiro_alvo[linha][coluna] == 'X':
+        print(Fore.YELLOW + "ja acertou nessa posicao!\n")
+        tabuleiro_tiros[linha][coluna] = Fore.RED + 'X'
+    else:
+        print(Fore.RED + "errou!\n")
+        tabuleiro_tiros[linha][coluna] = Fore.YELLOW + 'O'
+    return tabuleiro_alvo, tabuleiro_tiros, False
+
+def ataque_ia(tabuleiro_alvo, tabuleiro_tiros):
+    '''
+    Realiza um ataque da máquina em uma posição aleatória do tabuleiro.
+    Parametros:
+        tabuleiro_alvo (list) - Tabuleiro do adversário onde o ataque será realizado.
+        tabuleiro_tiros (list) - Tabuleiro da máquina onde os tiros são registrados.
+    Retornos: True se o ataque acertou, False se errou.
+    '''
+    while True:
+        linha = random.randint(0, len(tabuleiro_alvo) - 1)
+        coluna = random.randint(0, len(tabuleiro_alvo) - 1)
+        if tabuleiro_tiros[linha][coluna] == '~':
+            break
+    clear()
+    print("maquina atacou na posição:", linha + 1, NumeroPLetra(coluna))
+    if tabuleiro_alvo[linha][coluna] == 'n':
+        print("maquina acertou!\n")
+        tabuleiro_alvo[linha][coluna] = Fore.RED + 'X'
+        tabuleiro_tiros[linha][coluna] = Fore.RED + 'X'
+        return True
+    elif tabuleiro_alvo[linha][coluna] == 'X':
+        print("maquina ja acertou nessa posicao!\n")
+        tabuleiro_tiros[linha][coluna] = Fore.RED + 'X'
+    else:
+        print("maquina errou!\n")
+        tabuleiro_tiros[linha][coluna] = Fore.YELLOW + 'O'
+    return False
+
+def main():
+    '''
+    Função principal do jogo Batalha Naval.
+    Parametros: None
+    Retornos: Estatísticas do jogo.
+    '''
     
+    # Variáveis globais
+    
+    global TamanhoBarco, TamanhoMinimo, TamanhoMaximo
+    global arquivo_log
+    
+    # Estatísticas do jogo
+    
+    turno = 1
+    quantidade_tiros_j1 = 0
+    acertos_j1 = 0
+    quantidade_tiros_j2 = 0
+    acertos_j2 = 0
+    clear()
+    
+    # Configurações do jogo
+    
+    #barcos: [tipo, tamanho, quantidade]
+    barcos = [["Encouraçado", 5, 1], ["Porta-avião", 4, 1], ["Contratorpedeiro", 3, 2], ["Submarino", 2, 2]]
+
+    tamanho, modo = menu()
+    logger(arquivo_log, f"Jogo iniciado: Tamanho do tabuleiro: {tamanho} x {tamanho}, Modo: {'Jogador vs Jogador' if modo == 1 else 'Jogador vs Máquina'}")
+
+    # Criação dos tabuleiros
+    tabuleiro_j1 = CriarBoard(tamanho)
+    tiros_j1 = CriarBoard(tamanho)
+
+    tabuleiro_j2 = CriarBoard(tamanho)
+    tiros_j2 = CriarBoard(tamanho)
+
+    clear()
+    
+    # Colocação dos barcos
+    print(Fore.BLUE + "navio do jogador 1\n")
+    for barco in barcos:
+        for _ in range(barco[2]):
+            tabuleiro_j1 = ColocarBarco(tabuleiro_j1, barco[0], barco[1])
+    logger(arquivo_log, "Barcos do jogador 1 colocados no tabuleiro.")
+
+    if modo == 1:
+        print(Fore.GREEN + "navio do jogador 2\n")
+        for barco in barcos:
+            for _ in range(barco[2]):
+                tabuleiro_j2 = ColocarBarco(tabuleiro_j2, barco[0], barco[1])
+        logger(arquivo_log, "Barcos do jogador 2 colocados no tabuleiro.")
+    else:
+        print(Fore.YELLOW + "navio da maquina colocado")
+        for barco in barcos:
+            for _ in range(barco[2]):
+                linha = random.randint(0, tamanho - 1)
+                coluna = random.randint(0, tamanho - barco[1])
+                orientacao = random.choice(['h', 'v'])
+                while not barco_valido(tabuleiro_j2, linha, coluna, orientacao, barco[1]):
+                    linha = random.randint(0, tamanho - 1)
+                    coluna = random.randint(0, tamanho - barco[1])
+                    orientacao = random.choice(['h', 'v'])
+                for i in range(barco[1]):
+                    if orientacao == 'h':
+                        tabuleiro_j2[linha][coluna + i] = 'n'
+                    elif orientacao == 'v':
+                        tabuleiro_j2[linha + i][coluna] = 'n'
+        logger(arquivo_log, "Barcos da máquina colocados no tabuleiro.")
+        
+    clear()
+
+    # Início de ataques
+    while True:
+        print(Fore.YELLOW + "turno do jogador 1:\n")
+        PrintBoard(tiros_j1)
+        tabuleiro_j2, tiros_j1, acertou = realizar_ataque(tabuleiro_j2, tiros_j1)
+        if acertou:
+            acertos_j1 += 1
+        quantidade_tiros_j1 += 1
+        if vitoria(tabuleiro_j2):
+            print(Fore.GREEN + "jogador 1 venceu!")
+            break
+
+        print(Fore.YELLOW + "turno do jogador 2:\n")
+        if modo == 1:
+            PrintBoard(tiros_j2)
+            tabuleiro_j1, tiros_j2, acertou = realizar_ataque(tabuleiro_j1, tiros_j2)
+            if acertou:
+                acertos_j2 += 1
+            quantidade_tiros_j2 += 1
+            if vitoria(tabuleiro_j1):
+                print(Fore.GREEN + "jogador 2 venceu!")
+                break
+        else:
+            tabuleiro_j1, tiros_j2, acertou = ataque_ia(tabuleiro_j1, tiros_j2)
+            if acertou:
+                acertos_j2 += 1
+            quantidade_tiros_j2 += 1
+        turno += 1
+        logger(arquivo_log, f"Turno {turno}: Jogador 1 - Tiros: {quantidade_tiros_j1}, Acertos: {acertos_j1}; Jogador 2 - Tiros: {quantidade_tiros_j2}, Acertos: {acertos_j2}")
+        clear()
+      
+    #Mostra es estatísticas do jogo
+    print(Fore.MAGENTA + Style.BRIGHT + f"\nEstatísticas do jogo:")
+    print(Fore.CYAN + Style.BRIGHT + f"Jogador 1 - Tiros: {quantidade_tiros_j1}, Acertos: {acertos_j1}")
+    print(Fore.CYAN + Style.BRIGHT + f"Jogador 2 - Tiros: {quantidade_tiros_j2}, Acertos: {acertos_j2}")
+    logger(arquivo_log, f"Estatísticas do jogo: Jogador 1 - Tiros: {quantidade_tiros_j1}, Acertos: {acertos_j1}; Jogador 2 - Tiros: {quantidade_tiros_j2}, Acertos: {acertos_j2}")
+
+    #Verifica se quer continuar jogando
+    continuar = input(Fore.CYAN + Style.BRIGHT + "Deseja jogar novamente? (s/n): ").lower()
+    while continuar not in ['s', 'n']:
+        print(Fore.RED + "Opção inválida. Tente novamente.")
+        continuar = input(Fore.CYAN + Style.BRIGHT + "Deseja jogar novamente? (s/n): ").lower()
+    if continuar == 's':
+        main()
+    else:
+        print(Fore.GREEN + Style.BRIGHT + "Obrigado por jogar Batalha Naval!")
+        logger(arquivo_log, "Jogo encerrado pelo usuário.")  
+
+if __name__ == "__main__":
+    main()
